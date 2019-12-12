@@ -1,4 +1,4 @@
-module github.com/kadisi/test/cmd/led
+module github.com/kadisi/examples/cmd/trafficLight
 
 go 1.12
 
