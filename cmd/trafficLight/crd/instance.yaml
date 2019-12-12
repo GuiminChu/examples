@@ -1,0 +1,17 @@
+apiVersion: devices.kubeedge.io/v1alpha1
+kind: Device
+metadata:
+  name: traffic-light-instance-01
+  labels:
+    description: Light
+    model: traffic-light
+spec:
+  deviceModelRef:
+    name: traffic-light
+  nodeSelector:
+    nodeSelectorTerms:
+      - matchExpressions:
+          - key: ''
+            operator: In
+            values:
+              - 192.168.3.54-pi2 # give your edge node name
