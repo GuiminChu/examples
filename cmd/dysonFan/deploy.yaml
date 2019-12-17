@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dyson
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dyson
+  template:
+    metadata:
+      labels:
+        app: dyson
+    spec:
+      hostNetwork: true
+      containers:
+      - name: light
+        image: jiulongzaitian/dysonfan:v1.1
+        command: ["/dyson/dysonFan"]
+        args: ["-u", "your-account", "-p", "your-passwd","-d","your-deviceid"]
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+      restartPolicy: Always

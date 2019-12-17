@@ -15,3 +15,35 @@ spec:
             operator: In
             values:
               - 192.168.3.54-pi2 # give your edge node name
+status:
+  twins:
+    - desired:
+        metadata:
+          type: string
+        value: "OFF"
+      propertyName: red
+      reported:
+        metadata:
+          timestamp: "1576146376369"
+          type: string
+        value: "OFF"
+    - desired:
+        metadata:
+          type: string
+        value: "OFF"
+      propertyName: yellow
+      reported:
+        metadata:
+          timestamp: "1576146376370"
+          type: string
+        value: "OFF"
+    - desired:
+        metadata:
+          type: string
+        value: "OFF"
+      propertyName: green
+      reported:
+        metadata:
+          timestamp: "1576146376369"
+          type: string
+        value: "OFF"

@@ -1,0 +1,72 @@
+apiVersion: devices.kubeedge.io/v1alpha1
+kind: Device
+metadata:
+  labels:
+    description: fan 
+    model: dysonfan
+  name: dysonfan-instance-01
+  namespace: default
+spec:
+  deviceModelRef:
+    name: dysonfan
+  nodeSelector:
+    nodeSelectorTerms:
+    - matchExpressions:
+      - key: hostname
+        operator: In
+        values:
+        - 192.168.4.22-pi2
+status:
+  twins:
+    - propertyName: NightMode 
+      desired:
+        metadata:
+          type: string
+        value: 'OFF'
+      reported:
+        metadata:
+          type: string
+        value: 'OFF'
+    - propertyName: Speed 
+      desired:
+        metadata:
+          type: string
+        value: '0002'
+      reported:
+        metadata:
+          type: string
+        value: '0002'
+    - propertyName: Oscillation 
+      desired:
+        metadata:
+          type: string
+        value: 'OFF'
+      reported:
+        metadata:
+          type: string
+        value: 'OFF'
+    - propertyName: FilterLife 
+      reported:
+        metadata:
+          type: string
+        value: '1685'
+    - propertyName: Humidity 
+      reported:
+        metadata:
+          type: string 
+        value: '30' 
+    - propertyName: AQI 
+      reported:
+        metadata:
+          type: string 
+        value: '0 '
+    - propertyName: Dust 
+      reported:
+        metadata:
+          type: string 
+        value: '5' 
+    - propertyName: Temperature 
+      reported:
+        metadata:
+          type: string 
+        value: '24' 

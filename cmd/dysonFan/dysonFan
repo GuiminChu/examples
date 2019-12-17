@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import sys
+import getopt
+import os
+import libpurecoollink.dyson
+from libpurecoollink.dyson import DysonAccount
+from libpurecoollink.dyson_pure_state import DysonPureCoolState, DysonEnvironmentalSensorState
+from libpurecoollink.const import FanMode, NightMode, Oscillation,FanSpeed
+import paho.mqtt.client as mqtt
+import json
+import logging
+import urllib3
+
+def init_log():
+    logging.basicConfig(level=logging.DEBUG,
+                    filename='./dyson.log',
+                    filemode='a',
+                    format=
+                    '%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s'
+                    )
+
+    console = logging.StreamHandler()
+    console.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('LINE %(lineno)-4d : %(levelname)-8s %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+
+client = mqtt.Client()
+Devices = []
+
+libpurecoollink.dyson.DYSON_API_URL = "api.cp.dyson.cn"
+
+DeviceETPrefix = "$hw/events/device/"
+TwinETUpdateSuffix = "/twin/update"
+deviceID = "dysonfan-instance-01"
+
+def on_mqtt_connect(client, userdata, flags, rc):
+    logging.debug("Connected pi mqttserver with result code %s "%(str(rc)))
+
+def on_mqtt_message(client, userdata, msg):
+
+    detail = str(msg.payload,'utf-8')
+    deviceTwinUpdate = json.loads(detail)
+    if 'twin' in deviceTwinUpdate:
+        twin = deviceTwinUpdate['twin']
+        if 'Oscillation' in twin:
+            expect = twin['Oscillation']['expected']['value']
+            act = twin['Oscillation']['actual']['value']
+            logging.debug("Oscillation expect %s act %s"%(expect, act))
+            if expect != act:
+                Devices[0].set_configuration(oscillation=Oscillation(expect))
+                logging.debug("set fan oscillation to %s successfully"%(expect))
+        if 'NightMode' in twin:
+            expect = twin['NightMode']['expected']['value']
+            act = twin['NightMode']['actual']['value']
+            logging.debug("NightMode expect %s act %s"%(expect, act))
+            if expect != act:
+                Devices[0].set_configuration(night_mode=NightMode(expect))
+                logging.debug("set fan night mode to %s successfully"%(expect))
+        if 'Speed' in twin:
+            expect = twin['Speed']['expected']['value']
+            act = twin['Speed']['actual']['value']
+            logging.debug("Speed expect %s act %s"%(expect, act))
+            if expect != act:
+                Devices[0].set_configuration(fan_mode=FanMode.FAN, fan_speed=FanSpeed(expect))
+                logging.debug("set fan speed to %s successfully"%(expect))
+
+def pub_cool_state(coolState):
+    current = {
+        'twin':{
+            'NightMode': {
+                'actual': {
+                    'value': coolState.night_mode
+                },
+                'metadata': {
+                    'type': 'Updated'
+                }
+            },
+            'Speed': {
+                'actual': {
+                    'value': coolState.speed
+                },
+                'metadata': {
+                    'type': 'Updated'
+                }
+            },
+            'Oscillation': {
+                'actual': {
+                    'value': coolState.oscillation
+                },
+                'metadata': {
+                    'type': 'Updated'
+                }
+            },
+            'FilterLife': {
+                'actual': {
+                    'value': coolState.filter_life
+                },
+                'metadata': {
+                    'type': 'Updated'
+                }
+            }
+        }
+    }
+
+    deviceTwinUpdate = DeviceETPrefix + deviceID + TwinETUpdateSuffix
+    load = json.dumps(current)
+    client.publish(deviceTwinUpdate, payload=load, qos=0)
+    logging.debug("update coolState publish topic %s load %s"%(deviceTwinUpdate, load))
+
+def pub_sensor_state(sensorState):
+    logging.debug("DysonEnvironmentalSensorState received: ")
+    logging.debug("humidity:%s" % (sensorState.humidity))
+    logging.debug("AQI:%s" % (sensorState.volatil_organic_compounds))
+    logging.debug("dust:%s" % (sensorState.dust))
+    logging.debug("temperature: %.2f" % (sensorState.temperature - 273.15))
+
+    current = {
+        'twin':{
+            'Humidity': {
+                'actual': {
+                    'value': sensorState.humidity
+                },
+                'metadata': {
+                    'type': 'Updated'
+                }
+            },
+            'AQI': {
+                'actual': {
+                    'value': sensorState.volatil_organic_compounds
+                },
+                'metadata': {
+                    'type': 'Updated'
+                }
+            },
+            'Dust': {
+                'actual': {
+                    'value': sensorState.dust
+                },
+                'metadata': {
+                    'type': 'Updated'
+                }
+            },
+            'Temperature': {
+                'actual': {
+                    'value': "%.2f"%(sensorState.temperature -273.15)
+                },
+                'metadata': {
+                    'type': 'Updated'
+                }
+            }
+        }
+    }
+
+    deviceTwinUpdate = DeviceETPrefix + deviceID + TwinETUpdateSuffix
+    load = json.dumps(current)
+    client.publish(deviceTwinUpdate,payload=load,qos=0)
+    logging.debug("update sesorState publish topic %s load %s"%(deviceTwinUpdate, load))
+
+
+def start_mqtt_loop(mqttserver):
+    TwinETUpdateDetalSuffix = "/twin/update/delta"
+    topic = DeviceETPrefix + deviceID + TwinETUpdateDetalSuffix
+
+    client.on_connect = on_mqtt_connect
+    client.on_message = on_mqtt_message
+    client.connect(mqttserver, 1883, 10)
+    client.subscribe(topic, qos=0)
+    logging.debug("sub local mqtt topic %s"%(topic))
+    client.loop_start()
+
+
+
+def dyson_fan(username, passwd):
+    if username == "" and passwd == "":
+        help()
+
+    urllib3.disable_warnings()
+
+    logging.debug("start dyson fan")
+
+    DAccount = DysonAccount(username,passwd,"AU")
+    logging.debug("begin to login dyson")
+    logged = DAccount.login()
+    
+    if not logged:
+        logging.error('Unable to login to Dyson account')
+        exit(1)
+    logging.debug("login dyson successfully")
+
+    global Devices
+    # List devices available on the Dyson account
+    Devices = DAccount.devices()
+    
+    # Connect using discovery to the first device
+    connected = Devices[0].auto_connect()
+    
+    Devices[0].add_message_listener(on_message)
+    
+    Devices[0].request_current_state()
+    logging.debug("end dyson fan request current state")
+
+# ... connection do dyson account and to device ... #
+def on_message(msg):
+    # Message received
+    if isinstance(msg, DysonPureCoolState):
+        # Will be true for DysonPureHotCoolState too.
+        logging.debug("DysonPureCoolState message received: ")
+        logging.debug("night_mode: %s"%(msg.night_mode))
+        logging.debug("speed:%s"%(msg.speed))
+        logging.debug("oscillation:%s"%(msg.oscillation))
+        logging.debug("filter_life:%s"%(msg.filter_life))
+        pub_cool_state(msg)
+    elif isinstance(msg, DysonEnvironmentalSensorState):
+        logging.debug("DysonEnvironmentalSensorState received: ")
+        logging.debug("humidity:%s"%(msg.humidity))
+        logging.debug("AQI:%s" %( msg.volatil_organic_compounds))
+        logging.debug("dust:%s"%(msg.dust))
+        logging.debug("temperature: %.2f"%(msg.temperature - 273.15))
+        pub_sensor_state(msg)
+
+def help():
+    demo = os.path.basename(sys.argv[0])
+    print('''
+    %s  -u <username> -p <password> -d <deviceid> -m <mqtt server ip>
+    
+    or
+    
+    %s --username=<username> --password=<password> --deviceid=<deviceid> --mqttserver=<mqtt server ip>
+    
+    ''' % ( demo, demo))
+
+    sys.exit()
+
+
+def main():
+
+    argv = sys.argv[1:]
+    mqttserver = "127.0.0.1"
+    username = ""
+    passwd = ""
+
+    init_log()
+
+    try:
+        """
+            options, args = getopt.getopt(args, shortopts, longopts=[])
+
+            参数args：一般是sys.argv[1:]。过滤掉sys.argv[0]，它是执行脚本的名字，不算做命令行参数。
+            参数shortopts：短格式分析串。例如："hp:i:"，h后面没有冒号，表示后面不带参数；p和i后面带有冒号，表示后面带参数。
+            参数longopts：长格式分析串列表。例如：["help", "ip=", "port="]，help后面没有等号，表示后面不带参数；ip和port后面带冒号，表示后面带参数。
+            返回值args是个列表，其中的元素是那些不含'-'或'--'的参数。
+        """
+        opts, args = getopt.getopt(argv, "hu:p:d:m:", ["help", "username=", "password=","deviceid=", "mqttserver"])
+    except getopt.GetoptError:
+        logging.error('Error: get opt')
+        sys.exit(2)
+
+    # 返回值options是以元组为元素的列表。
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            help()
+        elif opt in ("-u", "--username"):
+            username = arg
+        elif opt in ("-p", "--password"):
+            passwd = arg
+        elif opt in ("-d", "--deviceid"):
+            deviceID = arg
+        elif opt in ("-m", "--mqttserver"):
+            mqttserver = arg
+
+    dyson_fan(username, passwd)
+    start_mqtt_loop(mqttserver)
+
+
+if __name__ == "__main__":
+    main()
+

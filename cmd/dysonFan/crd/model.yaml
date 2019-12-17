@@ -1,0 +1,55 @@
+apiVersion: devices.kubeedge.io/v1alpha1
+kind: DeviceModel
+metadata:
+  name: dysonfan 
+  namespace: default
+spec:
+  properties:
+    - name: NightMode 
+      description: Night Model ON/OFF
+      type:
+        string:
+          accessMode: ReadWrite
+          defaultValue: 'OFF'
+    - name: Speed 
+      description: Fan Speed 
+      type:
+        string:
+          accessMode: ReadWrite
+          defaultValue: '0002'
+    - name: Oscillation 
+      description: oscillation ON/OFF
+      type:
+        string:
+          accessMode: ReadWrite
+          defaultValue: 'OFF'
+    - name: FilterLife  
+      description: Filter lift
+      type:
+        string:
+          accessMode: ReadOnly
+          defaultValue: '1685'
+    - name: Humidity 
+      description: humidity 
+      type:
+        string:
+          accessMode: ReadOnly
+          defaultValue: '30' 
+    - name: AQI 
+      description: Air quality index  
+      type:
+        string:
+          accessMode: ReadOnly
+          defaultValue: '0'
+    - name: Dust 
+      description: dust 
+      type:
+        string:
+          accessMode: ReadOnly
+          defaultValue: '5'
+    - name: Temperature  
+      description: temperature 
+      type:
+        string:
+          accessMode: ReadOnly
+          defaultValue: '24' 

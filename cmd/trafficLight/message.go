@@ -32,9 +32,9 @@ var CONFIG_MAP_PATH = "/opt/kubeedge/deviceProfile.json"
 
 const (
 	DeviceETPrefix            = "$hw/events/device/"
-	DeviceETStateUpdateSuffix = "/state/update"
 	TwinETUpdateSuffix        = "/twin/update"
 	TwinETUpdateDetalSuffix   = "/twin/update/delta"
+	DeviceETStateUpdateSuffix = "/state/update"
 	TwinETCloudSyncSuffix     = "/twin/cloud_updated"
 	TwinETGetResultSuffix     = "/twin/get/result"
 	TwinETGetSuffix           = "/twin/get"
@@ -110,6 +110,10 @@ func loadConfigMap() error {
 	}
 	fmt.Printf("Finally get wpi pin number from configmap: red %d yellow %d green %d\n",
 		red_wpi_num, yellow_wpi_num, green_wpi_num)
+
+	SetOutput(red_wpi_num)
+	SetOutput(yellow_wpi_num)
+	SetOutput(green_wpi_num)
 	return nil
 }
 
@@ -139,16 +143,22 @@ func OperateUpdateDetalSub(c MQTT.Client, msg MQTT.Message) {
 	}
 	value := *(current.Twin[RED_STATE].Expected.Value)
 	if LedState(red_wpi_num) != value {
-		Set(red_wpi_num, value)
+		if err := Set(red_wpi_num, value); err != nil {
+			fmt.Printf("Set Red light to %v error %v", value, err)
+		}
 	}
 
 	value = *(current.Twin[YELLOW_STATE].Expected.Value)
 	if LedState(yellow_wpi_num) != value {
-		Set(yellow_wpi_num, value)
+		if err := Set(yellow_wpi_num, value); err != nil {
+			fmt.Printf("Set Yellow light to %v error %v", value, err)
+		}
 	}
 	value = *(current.Twin[GREEN_STATE].Expected.Value)
 	if LedState(green_wpi_num) != value {
-		Set(green_wpi_num, value)
+		if err := Set(green_wpi_num, value); err != nil {
+			fmt.Printf("Set Green light to %v error %v", value, err)
+		}
 	}
 }
 
@@ -212,6 +222,7 @@ type DeviceStateUpdate struct {
 	State string `json:"state,omitempty"`
 }
 
+/*
 func ChangeDeviceState(state string) {
 	fmt.Println("Changing the state of the device to online")
 	var deviceStateUpdateMessage DeviceStateUpdate
@@ -226,8 +237,10 @@ func ChangeDeviceState(state string) {
 		log.Fatalf("client.publish() Error in device state update  is  %v", token.Error())
 	}
 }
+ */
 
 //getTwin function is used to get the device twin details from the edge
+/*
 func GetTwin(updateMessage dttype.DeviceTwinUpdate) {
 	getTwin := DeviceETPrefix + deviceID + TwinETGetSuffix
 	twinUpdateBody, err := json.Marshal(updateMessage)
@@ -239,3 +252,4 @@ func GetTwin(updateMessage dttype.DeviceTwinUpdate) {
 		log.Fatalf("client.publish() Error in device twin get  is ", token.Error())
 	}
 }
+ */
