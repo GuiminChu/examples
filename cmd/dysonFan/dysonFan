@@ -67,38 +67,45 @@ def on_mqtt_message(client, userdata, msg):
                 logging.debug("set fan speed to %s successfully"%(expect))
 
 def pub_cool_state(coolState):
+    
+    logging.debug("DysonPureCoolState message received: ")
+    logging.debug("night_mode: %s" % (coolState.night_mode))
+    logging.debug("speed:%s" % (coolState.speed))
+    logging.debug("oscillation:%s" % (coolState.oscillation))
+    logging.debug("filter_life:%s" % (coolState.filter_life))
+    
     current = {
-        'twin':{
-            'NightMode': {
-                'actual': {
-                    'value': coolState.night_mode
+        "twin":{
+            "NightMode": {
+                "actual": {
+                    "value": coolState.night_mode
                 },
-                'metadata': {
-                    'type': 'Updated'
+                "metadata": {
+                    "type": "Updated"
                 }
             },
-            'Speed': {
-                'actual': {
-                    'value': coolState.speed
+            "Speed": {
+                "actual": {
+                    "value": coolState.speed
                 },
-                'metadata': {
-                    'type': 'Updated'
+                "metadata": {
+                    "type":"Updated"
                 }
             },
-            'Oscillation': {
-                'actual': {
-                    'value': coolState.oscillation
+            "Oscillation": {
+                "actual": {
+                    "value": coolState.oscillation
                 },
-                'metadata': {
-                    'type': 'Updated'
+                "metadata": {
+                    "type": "Updated"
                 }
             },
-            'FilterLife': {
-                'actual': {
-                    'value': coolState.filter_life
+            "FilterLife": {
+                "actual": {
+                    "value": coolState.filter_life
                 },
-                'metadata': {
-                    'type': 'Updated'
+                "metadata": {
+                    "type": "Updated"
                 }
             }
         }
@@ -110,44 +117,44 @@ def pub_cool_state(coolState):
     logging.debug("update coolState publish topic %s load %s"%(deviceTwinUpdate, load))
 
 def pub_sensor_state(sensorState):
-    logging.debug("DysonEnvironmentalSensorState received: ")
-    logging.debug("humidity:%s" % (sensorState.humidity))
+    logging.debug("DysonEnvironmentalSensorState message received: ")
+    logging.debug("Huimidity: %s" % (sensorState.humidity))
     logging.debug("AQI:%s" % (sensorState.volatil_organic_compounds))
-    logging.debug("dust:%s" % (sensorState.dust))
-    logging.debug("temperature: %.2f" % (sensorState.temperature - 273.15))
+    logging.debug("Dust:%s" % (sensorState.dust))
+    logging.debug("Temperature:%s" % (sensorState.temperature))
 
     current = {
-        'twin':{
-            'Humidity': {
-                'actual': {
-                    'value': sensorState.humidity
+        "twin":{
+            "Humidity": {
+                "actual": {
+                    "value": str(sensorState.humidity)
                 },
-                'metadata': {
-                    'type': 'Updated'
+                "metadata": {
+                    "type": "Updated"
                 }
             },
-            'AQI': {
-                'actual': {
-                    'value': sensorState.volatil_organic_compounds
+            "AQI": {
+                "actual": {
+                    "value": str(sensorState.volatil_organic_compounds)
                 },
-                'metadata': {
-                    'type': 'Updated'
+                "metadata": {
+                    "type": "Updated"
                 }
             },
-            'Dust': {
-                'actual': {
-                    'value': sensorState.dust
+            "Dust": {
+                "actual": {
+                    "value": str(sensorState.dust)
                 },
-                'metadata': {
-                    'type': 'Updated'
+                "metadata": {
+                    "type": "Updated"
                 }
             },
-            'Temperature': {
-                'actual': {
-                    'value': "%.2f"%(sensorState.temperature -273.15)
+            "Temperature": {
+                "actual": {
+                    "value": "%.2f"%(sensorState.temperature -273.15)
                 },
-                'metadata': {
-                    'type': 'Updated'
+                "metadata": {
+                    "type": "Updated"
                 }
             }
         }
@@ -205,19 +212,8 @@ def dyson_fan(username, passwd):
 def on_message(msg):
     # Message received
     if isinstance(msg, DysonPureCoolState):
-        # Will be true for DysonPureHotCoolState too.
-        logging.debug("DysonPureCoolState message received: ")
-        logging.debug("night_mode: %s"%(msg.night_mode))
-        logging.debug("speed:%s"%(msg.speed))
-        logging.debug("oscillation:%s"%(msg.oscillation))
-        logging.debug("filter_life:%s"%(msg.filter_life))
         pub_cool_state(msg)
     elif isinstance(msg, DysonEnvironmentalSensorState):
-        logging.debug("DysonEnvironmentalSensorState received: ")
-        logging.debug("humidity:%s"%(msg.humidity))
-        logging.debug("AQI:%s" %( msg.volatil_organic_compounds))
-        logging.debug("dust:%s"%(msg.dust))
-        logging.debug("temperature: %.2f"%(msg.temperature - 273.15))
         pub_sensor_state(msg)
 
 def help():
